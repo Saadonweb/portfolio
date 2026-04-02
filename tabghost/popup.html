@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TabGhost</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <span class="ghost-icon">👻</span>
+    <div>
+      <div class="brand-name">TabGhost</div>
+      <div class="brand-sub">Your tab graveyard</div>
+    </div>
+  </div>
+  <button class="settings-btn" id="clearBtn" title="Clear graveyard">🗑️</button>
+</header>
+
+<!-- GUILT STATS -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-num" id="statGhosts">0</div>
+    <div class="stat-label">Ghosts</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <div class="stat-num" id="statAbandoned">0</div>
+    <div class="stat-label">Abandoned</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <div class="stat-num" id="statResurrected">0</div>
+    <div class="stat-label">Resurrected</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <div class="stat-num guilt" id="statGuilt">0</div>
+    <div class="stat-label">Guilt Score</div>
+  </div>
+</div>
+
+<!-- GUILT METER -->
+<div class="guilt-meter-wrap">
+  <div class="guilt-meter-track">
+    <div class="guilt-meter-fill" id="guiltMeter"></div>
+  </div>
+  <div class="guilt-meter-labels">
+    <span>Pure Soul</span>
+    <span id="guiltLabel">Loading...</span>
+    <span>Hoarder</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="graveyard">☠️ Graveyard</button>
+  <button class="tab-btn" data-tab="haunted">👻 Active Ghosts</button>
+  <button class="tab-btn" data-tab="report">📊 Weekly</button>
+</div>
+
+<!-- GRAVEYARD PANEL -->
+<div class="panel active" id="panel-graveyard">
+  <div class="panel-empty" id="graveyardEmpty">
+    <div class="empty-icon">🕊️</div>
+    <div class="empty-title">No ghosts here.</div>
+    <div class="empty-sub">Close some tabs and ignore them for 3 days.<br>We'll remember them.</div>
+  </div>
+  <div class="ghost-list" id="graveyardList"></div>
+</div>
+
+<!-- HAUNTED ACTIVE TABS PANEL -->
+<div class="panel" id="panel-haunted">
+  <div class="panel-empty" id="hauntedEmpty">
+    <div class="empty-icon">✨</div>
+    <div class="empty-title">No haunted tabs.</div>
+    <div class="empty-sub">All your open tabs are fresh.<br>Suspiciously productive.</div>
+  </div>
+  <div class="ghost-list" id="hauntedList"></div>
+</div>
+
+<!-- WEEKLY REPORT PANEL -->
+<div class="panel" id="panel-report">
+  <div class="weekly-report">
+    <div class="report-header">
+      <span class="report-icon">📊</span>
+      <div>
+        <div class="report-title">This Week's Guilt</div>
+        <div class="report-date" id="reportDate">—</div>
+      </div>
+    </div>
+
+    <div class="report-grid">
+      <div class="report-card">
+        <div class="report-card-num" id="rWeekly">0</div>
+        <div class="report-card-label">Tabs Abandoned</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-num" id="rResurrected">0</div>
+        <div class="report-card-label">Resurrected</div>
+      </div>
+      <div class="report-card red">
+        <div class="report-card-num" id="rTotal">0</div>
+        <div class="report-card-label">All Time Lost</div>
+      </div>
+      <div class="report-card green">
+        <div class="report-card-num" id="rSaved">0</div>
+        <div class="report-card-label">All Time Saved</div>
+      </div>
+    </div>
+
+    <div class="report-verdict" id="reportVerdict">
+      <span class="verdict-emoji" id="verdictEmoji">👻</span>
+      <span id="verdictText">Loading your verdict...</span>
+    </div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
