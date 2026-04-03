@@ -1,6 +1,9 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+});
 
 // ── Fetch up to 300 commits from a user's public repos ──
 async function fetchCommits(username) {
@@ -172,7 +175,7 @@ Sample commit messages: ${sampleMessages}
 Write the verdict in 2nd person ("You are...", "Your..."). Max 3 sentences. Be specific to their data.`;
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gemini-1.5-flash',
     messages: [{ role: 'user', content: prompt }],
     max_tokens: 160,
     temperature: 0.85,
@@ -206,7 +209,7 @@ export default async function handler(req, res) {
 
     // 3. GPT-4 verdict (only if API key is set)
     let verdict = 'A developer who ships code and takes names. The commit history tells a story of dedication, late nights, and an above-average relationship with the backspace key.';
-    if (process.env.OPENAI_API_KEY) {
+    if (process.env.GEMINI_API_KEY) {
       const recentMsgs = commits.slice(0, 30).map(c => c.message);
       verdict = await generateVerdict(user.login, stats, archetype, recentMsgs);
     }
