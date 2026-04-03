@@ -1,237 +1,238 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-});
-
 // ── Fetch up to 300 commits from a user's public repos ──
 async function fetchCommits(username) {
   const headers = {
-    'Accept': 'application/vnd.github+json',
-    'User-Agent': 'DevMood-App',
-    ...(process.env.GITHUB_TOKEN && {
-      'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`
-    })
-  };
+      'Accept': 'application/vnd.github+json',
+          'User-Agent': 'DevMood-App',
+              ...(process.env.GITHUB_TOKEN && {
+                    'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`
+                        })
+                          };
 
-  // 1. Get the user profile
-  const userRes = await fetch(`https://api.github.com/users/${username}`, { headers });
-  if (!userRes.ok) {
-    if (userRes.status === 404) throw new Error('GitHub user not found.');
-    throw new Error('GitHub API error. Please try again.');
-  }
-  const user = await userRes.json();
+                            // 1. Get the user profile
+                              const userRes = await fetch(`https://api.github.com/users/${username}`, { headers });
+                                if (!userRes.ok) {
+                                    if (userRes.status === 404) throw new Error('GitHub user not found.');
+                                        throw new Error('GitHub API error. Please try again.');
+                                          }
+                                            const user = await userRes.json();
 
-  // 2. Get their repos (up to 30, sorted by recent push)
-  const reposRes = await fetch(
-    `https://api.github.com/users/${username}/repos?per_page=30&sort=pushed&type=owner`,
-    { headers }
-  );
-  const repos = await reposRes.json();
-  if (!Array.isArray(repos)) throw new Error('Could not fetch repositories.');
+                                              // 2. Get their repos (up to 30, sorted by recent push)
+                                                const reposRes = await fetch(
+                                                    `https://api.github.com/users/${username}/repos?per_page=30&sort=pushed&type=owner`,
+                                                        { headers }
+                                                          );
+                                                            const repos = await reposRes.json();
+                                                              if (!Array.isArray(repos)) throw new Error('Could not fetch repositories.');
 
-  // 3. Collect commits across repos (max ~300 total)
-  const allCommits = [];
-  const repoSlice = repos.slice(0, 10); // top 10 repos by recent push
+                                                                // 3. Collect commits across repos (max ~300 total)
+                                                                  const allCommits = [];
+                                                                    const repoSlice = repos.slice(0, 10); // top 10 repos by recent push
 
-  await Promise.all(repoSlice.map(async (repo) => {
-    try {
-      const commitsRes = await fetch(
-        `https://api.github.com/repos/${username}/${repo.name}/commits?author=${username}&per_page=30`,
-        { headers }
-      );
-      if (!commitsRes.ok) return;
-      const commits = await commitsRes.json();
-      if (!Array.isArray(commits)) return;
-      commits.forEach(c => {
-        if (c?.commit?.message) {
-          allCommits.push({
-            message: c.commit.message.split('\n')[0].slice(0, 120),
-            date: c.commit.author?.date || '',
-            repo: repo.name
-          });
-        }
-      });
-    } catch { /* skip repos that fail */ }
-  }));
+                                                                      await Promise.all(repoSlice.map(async (repo) => {
+                                                                          try {
+                                                                                const commitsRes = await fetch(
+                                                                                        `https://api.github.com/repos/${username}/${repo.name}/commits?author=${username}&per_page=30`,
+                                                                                                { headers }
+                                                                                                      );
+                                                                                                            if (!commitsRes.ok) return;
+                                                                                                                  const commits = await commitsRes.json();
+                                                                                                                        if (!Array.isArray(commits)) return;
+                                                                                                                              commits.forEach(c => {
+                                                                                                                                      if (c?.commit?.message) {
+                                                                                                                                                allCommits.push({
+                                                                                                                                                            message: c.commit.message.split('\n')[0].slice(0, 120),
+                                                                                                                                                                        date: c.commit.author?.date || '',
+                                                                                                                                                                                    repo: repo.name
+                                                                                                                                                                                              });
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                            });
+                                                                                                                                                                                                                } catch { /* skip repos that fail */ }
+                                                                                                                                                                                                                  }));
 
-  return { user, commits: allCommits.slice(0, 300) };
-}
+                                                                                                                                                                                                                    return { user, commits: allCommits.slice(0, 300) };
+                                                                                                                                                                                                                    }
 
-// ── Compute stats from raw commits ──
-function analyzeCommits(commits) {
-  if (!commits.length) return null;
+                                                                                                                                                                                                                    // ── Compute stats from raw commits ──
+                                                                                                                                                                                                                    function analyzeCommits(commits) {
+                                                                                                                                                                                                                      if (!commits.length) return null;
 
-  const messages = commits.map(c => c.message.toLowerCase());
-  const total = commits.length;
+                                                                                                                                                                                                                        const messages = commits.map(c => c.message.toLowerCase());
+                                                                                                                                                                                                                          const total = commits.length;
 
-  // Commit type breakdown
-  const types = {
-    fix:      messages.filter(m => /^fix(\(.+\))?:/.test(m) || m.startsWith('fix:')).length,
-    feat:     messages.filter(m => /^feat(\(.+\))?:/.test(m) || m.startsWith('feat:')).length,
-    chore:    messages.filter(m => /^chore(\(.+\))?:/.test(m) || m.startsWith('chore:')).length,
-    docs:     messages.filter(m => /^docs(\(.+\))?:/.test(m) || m.startsWith('docs:')).length,
-    refactor: messages.filter(m => /^refactor(\(.+\))?:/.test(m) || m.startsWith('refactor:')).length,
-    test:     messages.filter(m => /^test(\(.+\))?:/.test(m) || m.startsWith('test:')).length,
-    wip:      messages.filter(m => /\bwip\b|temp:|temporary|work in progress/.test(m)).length,
-  };
+                                                                                                                                                                                                                            // Commit type breakdown
+                                                                                                                                                                                                                              const types = {
+                                                                                                                                                                                                                                  fix:      messages.filter(m => /^fix(\(.+\))?:/.test(m) || m.startsWith('fix:')).length,
+                                                                                                                                                                                                                                      feat:     messages.filter(m => /^feat(\(.+\))?:/.test(m) || m.startsWith('feat:')).length,
+                                                                                                                                                                                                                                          chore:    messages.filter(m => /^chore(\(.+\))?:/.test(m) || m.startsWith('chore:')).length,
+                                                                                                                                                                                                                                              docs:     messages.filter(m => /^docs(\(.+\))?:/.test(m) || m.startsWith('docs:')).length,
+                                                                                                                                                                                                                                                  refactor: messages.filter(m => /^refactor(\(.+\))?:/.test(m) || m.startsWith('refactor:')).length,
+                                                                                                                                                                                                                                                      test:     messages.filter(m => /^test(\(.+\))?:/.test(m) || m.startsWith('test:')).length,
+                                                                                                                                                                                                                                                          wip:      messages.filter(m => /\bwip\b|temp:|temporary|work in progress/.test(m)).length,
+                                                                                                                                                                                                                                                            };
 
-  // Time analysis
-  const hours = commits
-    .map(c => c.date ? new Date(c.date).getHours() : null)
-    .filter(h => h !== null);
-  const nightCommits = hours.filter(h => h >= 22 || h <= 4).length;
-  const nightOwlScore = Math.round((nightCommits / Math.max(hours.length, 1)) * 100);
+                                                                                                                                                                                                                                                              // Time analysis
+                                                                                                                                                                                                                                                                const hours = commits
+                                                                                                                                                                                                                                                                    .map(c => c.date ? new Date(c.date).getHours() : null)
+                                                                                                                                                                                                                                                                        .filter(h => h !== null);
+                                                                                                                                                                                                                                                                          const nightCommits = hours.filter(h => h >= 22 || h <= 4).length;
+                                                                                                                                                                                                                                                                            const nightOwlScore = Math.round((nightCommits / Math.max(hours.length, 1)) * 100);
 
-  // Hour frequency map
-  const hourMap = Array(24).fill(0);
-  hours.forEach(h => hourMap[h]++);
-  const peakHour = hourMap.indexOf(Math.max(...hourMap));
+                                                                                                                                                                                                                                                                              // Hour frequency map
+                                                                                                                                                                                                                                                                                const hourMap = Array(24).fill(0);
+                                                                                                                                                                                                                                                                                  hours.forEach(h => hourMap[h]++);
+                                                                                                                                                                                                                                                                                    const peakHour = hourMap.indexOf(Math.max(...hourMap));
 
-  // Day of week
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const dayMap = Array(7).fill(0);
-  commits.forEach(c => {
-    if (c.date) dayMap[new Date(c.date).getDay()]++;
-  });
-  const peakDay = days[dayMap.indexOf(Math.max(...dayMap))];
+                                                                                                                                                                                                                                                                                      // Day of week
+                                                                                                                                                                                                                                                                                        const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                                                                                                                                                                                                                                                                                          const dayMap = Array(7).fill(0);
+                                                                                                                                                                                                                                                                                            commits.forEach(c => {
+                                                                                                                                                                                                                                                                                                if (c.date) dayMap[new Date(c.date).getDay()]++;
+                                                                                                                                                                                                                                                                                                  });
+                                                                                                                                                                                                                                                                                                    const peakDay = days[dayMap.indexOf(Math.max(...dayMap))];
 
-  // Emoji usage
-  const emojiRegex = /[\u{1F300}-\u{1FAFF}]/u;
-  const emojiCommits = messages.filter(m => emojiRegex.test(m)).length;
-  const emojiScore = Math.round((emojiCommits / total) * 100);
+                                                                                                                                                                                                                                                                                                      // Emoji usage
+                                                                                                                                                                                                                                                                                                        const emojiRegex = /[\u{1F300}-\u{1FAFF}]/u;
+                                                                                                                                                                                                                                                                                                          const emojiCommits = messages.filter(m => emojiRegex.test(m)).length;
+                                                                                                                                                                                                                                                                                                            const emojiScore = Math.round((emojiCommits / total) * 100);
 
-  // Chaos signals
-  const chaosWords = ['wip','temp','todo','fixme','broken','oops','bad','hack','ugly','quick','dirty','wtf','final','v2','v3','asdf','test123'];
-  const chaosCommits = messages.filter(m => chaosWords.some(w => m.includes(w))).length;
-  const chaosScore = Math.min(100, Math.round((chaosCommits / total) * 100 * 2.5));
+                                                                                                                                                                                                                                                                                                              // Chaos signals
+                                                                                                                                                                                                                                                                                                                const chaosWords = ['wip','temp','todo','fixme','broken','oops','bad','hack','ugly','quick','dirty','wtf','final','v2','v3','asdf','test123'];
+                                                                                                                                                                                                                                                                                                                  const chaosCommits = messages.filter(m => chaosWords.some(w => m.includes(w))).length;
+                                                                                                                                                                                                                                                                                                                    const chaosScore = Math.min(100, Math.round((chaosCommits / total) * 100 * 2.5));
 
-  // Commit message length avg
-  const avgLen = Math.round(messages.reduce((s, m) => s + m.length, 0) / total);
+                                                                                                                                                                                                                                                                                                                      // Commit message length avg
+                                                                                                                                                                                                                                                                                                                        const avgLen = Math.round(messages.reduce((s, m) => s + m.length, 0) / total);
 
-  // Conventional commit usage
-  const conventionalRe = /^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?:/;
-  const conventionalCount = messages.filter(m => conventionalRe.test(m)).length;
-  const conventionalScore = Math.round((conventionalCount / total) * 100);
+                                                                                                                                                                                                                                                                                                                          // Conventional commit usage
+                                                                                                                                                                                                                                                                                                                            const conventionalRe = /^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?:/;
+                                                                                                                                                                                                                                                                                                                              const conventionalCount = messages.filter(m => conventionalRe.test(m)).length;
+                                                                                                                                                                                                                                                                                                                                const conventionalScore = Math.round((conventionalCount / total) * 100);
 
-  // Derive top type
-  const topType = Object.entries(types).sort((a,b) => b[1]-a[1])[0];
+                                                                                                                                                                                                                                                                                                                                  // Derive top type
+                                                                                                                                                                                                                                                                                                                                    const topType = Object.entries(types).sort((a,b) => b[1]-a[1])[0];
 
-  return {
-    total,
-    types,
-    nightOwlScore,
-    peakHour,
-    peakDay,
-    emojiScore,
-    chaosScore,
-    avgMsgLen: avgLen,
-    conventionalScore,
-    topType: topType ? `${topType[0]}: (${Math.round((topType[1]/total)*100)}%)` : 'misc',
-  };
-}
+                                                                                                                                                                                                                                                                                                                                      return {
+                                                                                                                                                                                                                                                                                                                                          total,
+                                                                                                                                                                                                                                                                                                                                              types,
+                                                                                                                                                                                                                                                                                                                                                  nightOwlScore,
+                                                                                                                                                                                                                                                                                                                                                      peakHour,
+                                                                                                                                                                                                                                                                                                                                                          peakDay,
+                                                                                                                                                                                                                                                                                                                                                              emojiScore,
+                                                                                                                                                                                                                                                                                                                                                                  chaosScore,
+                                                                                                                                                                                                                                                                                                                                                                      avgMsgLen: avgLen,
+                                                                                                                                                                                                                                                                                                                                                                          conventionalScore,
+                                                                                                                                                                                                                                                                                                                                                                              topType: topType ? `${topType[0]}: (${Math.round((topType[1]/total)*100)}%)` : 'misc',
+                                                                                                                                                                                                                                                                                                                                                                                };
+                                                                                                                                                                                                                                                                                                                                                                                }
 
-// ── Determine archetype from stats ──
-function getArchetype(stats) {
-  const { nightOwlScore, chaosScore, emojiScore, conventionalScore, types, total } = stats;
+                                                                                                                                                                                                                                                                                                                                                                                // ── Determine archetype from stats ──
+                                                                                                                                                                                                                                                                                                                                                                                function getArchetype(stats) {
+                                                                                                                                                                                                                                                                                                                                                                                  const { nightOwlScore, chaosScore, emojiScore, conventionalScore, types, total } = stats;
 
-  const fixPct   = (types.fix / total) * 100;
-  const featPct  = (types.feat / total) * 100;
-  const docsPct  = (types.docs / total) * 100;
-  const wipPct   = (types.wip / total) * 100;
+                                                                                                                                                                                                                                                                                                                                                                                    const fixPct   = (types.fix / total) * 100;
+                                                                                                                                                                                                                                                                                                                                                                                      const featPct  = (types.feat / total) * 100;
+                                                                                                                                                                                                                                                                                                                                                                                        const docsPct  = (types.docs / total) * 100;
+                                                                                                                                                                                                                                                                                                                                                                                          const wipPct   = (types.wip / total) * 100;
 
-  if (nightOwlScore >= 50)   return 'The Midnight Coder';
-  if (chaosScore >= 70)      return 'The Chaos Agent';
-  if (emojiScore >= 50)      return 'The Emoji Architect';
-  if (conventionalScore >= 70) return 'The Clean Coder';
-  if (wipPct >= 20)          return 'The WIP Warrior';
-  if (fixPct >= 50)          return 'The Bug Slayer';
-  if (docsPct >= 15)         return 'The Doc Sage';
-  if (featPct >= 50)         return 'The Feature Machine';
-  return 'The Reliable Builder';
-}
+                                                                                                                                                                                                                                                                                                                                                                                            if (nightOwlScore >= 50)   return 'The Midnight Coder';
+                                                                                                                                                                                                                                                                                                                                                                                              if (chaosScore >= 70)      return 'The Chaos Agent';
+                                                                                                                                                                                                                                                                                                                                                                                                if (emojiScore >= 50)      return 'The Emoji Architect';
+                                                                                                                                                                                                                                                                                                                                                                                                  if (conventionalScore >= 70) return 'The Clean Coder';
+                                                                                                                                                                                                                                                                                                                                                                                                    if (wipPct >= 20)          return 'The WIP Warrior';
+                                                                                                                                                                                                                                                                                                                                                                                                      if (fixPct >= 50)          return 'The Bug Slayer';
+                                                                                                                                                                                                                                                                                                                                                                                                        if (docsPct >= 15)         return 'The Doc Sage';
+                                                                                                                                                                                                                                                                                                                                                                                                          if (featPct >= 50)         return 'The Feature Machine';
+                                                                                                                                                                                                                                                                                                                                                                                                            return 'The Reliable Builder';
+                                                                                                                                                                                                                                                                                                                                                                                                            }
 
-// ── GPT-4 personality verdict ──
-async function generateVerdict(username, stats, archetype, recentMessages) {
-  const sampleMessages = recentMessages.slice(0, 20).map(m => `"${m}"`).join(', ');
+                                                                                                                                                                                                                                                                                                                                                                                                            // ── Gemini personality verdict (native REST API) ──
+                                                                                                                                                                                                                                                                                                                                                                                                            async function generateVerdict(username, stats, archetype, recentMessages) {
+                                                                                                                                                                                                                                                                                                                                                                                                              const sampleMessages = recentMessages.slice(0, 20).map(m => `"${m}"`).join(', ');
 
-  const prompt = `You are DevMood, an AI that analyzes GitHub commit history and writes brutally honest but funny developer personality profiles.
+                                                                                                                                                                                                                                                                                                                                                                                                                const prompt = `You are DevMood, an AI that analyzes GitHub commit history and writes brutally honest but funny developer personality profiles.
 
-Analyze the following developer stats and write a SHORT personality verdict (2-3 sentences max). Be witty, specific, and reference their actual stats. Don't be mean — think roast-level funny, not cruel.
+                                                                                                                                                                                                                                                                                                                                                                                                                Analyze the following developer stats and write a SHORT personality verdict (2-3 sentences max). Be witty, specific, and reference their actual stats. Don't be mean -- think roast-level funny, not cruel.
 
-Developer: ${username}
-Archetype: ${archetype}
-Total commits analyzed: ${stats.total}
-Night Owl Score: ${stats.nightOwlScore}/100 (how often they commit at night)
-Chaos Index: ${stats.chaosScore}/100 (how messy their commit messages are)
-Emoji Usage: ${stats.emojiScore}%
-Conventional Commits: ${stats.conventionalScore}%
-Most active day: ${stats.peakDay}
-Peak commit hour: ${stats.peakHour}:00
-Average message length: ${stats.avgMsgLen} characters
-Sample commit messages: ${sampleMessages}
+                                                                                                                                                                                                                                                                                                                                                                                                                Developer: ${username}
+                                                                                                                                                                                                                                                                                                                                                                                                                Archetype: ${archetype}
+                                                                                                                                                                                                                                                                                                                                                                                                                Total commits analyzed: ${stats.total}
+                                                                                                                                                                                                                                                                                                                                                                                                                Night Owl Score: ${stats.nightOwlScore}/100 (how often they commit at night)
+                                                                                                                                                                                                                                                                                                                                                                                                                Chaos Index: ${stats.chaosScore}/100 (how messy their commit messages are)
+                                                                                                                                                                                                                                                                                                                                                                                                                Emoji Usage: ${stats.emojiScore}%
+                                                                                                                                                                                                                                                                                                                                                                                                                Conventional Commits: ${stats.conventionalScore}%
+                                                                                                                                                                                                                                                                                                                                                                                                                Most active day: ${stats.peakDay}
+                                                                                                                                                                                                                                                                                                                                                                                                                Peak commit hour: ${stats.peakHour}:00
+                                                                                                                                                                                                                                                                                                                                                                                                                Average message length: ${stats.avgMsgLen} characters
+                                                                                                                                                                                                                                                                                                                                                                                                                Sample commit messages: ${sampleMessages}
 
-Write the verdict in 2nd person ("You are...", "Your..."). Max 3 sentences. Be specific to their data.`;
+                                                                                                                                                                                                                                                                                                                                                                                                                Write the verdict in 2nd person ("You are...", "Your..."). Max 3 sentences. Be specific to their data.`;
 
-  const response = await openai.chat.completions.create({
-    model: 'gemini-1.5-flash',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 160,
-    temperature: 0.85,
-  });
+                                                                                                                                                                                                                                                                                                                                                                                                                  const res = await fetch(
+                                                                                                                                                                                                                                                                                                                                                                                                                      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+                                                                                                                                                                                                                                                                                                                                                                                                                          {
+                                                                                                                                                                                                                                                                                                                                                                                                                                method: 'POST',
+                                                                                                                                                                                                                                                                                                                                                                                                                                      headers: { 'Content-Type': 'application/json' },
+                                                                                                                                                                                                                                                                                                                                                                                                                                            body: JSON.stringify({
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    contents: [{ parts: [{ text: prompt }] }],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            generationConfig: { maxOutputTokens: 160, temperature: 0.85 },
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                  }),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        );
 
-  return response.choices[0]?.message?.content?.trim() || 'A developer of mystery. The commits speak louder than words.';
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            const data = await res.json();
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                              const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                return text || 'A developer of mystery. The commits speak louder than words.';
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
 
-// ── MAIN HANDLER ──
-export default async function handler(req, res) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                // ── MAIN HANDLER ──
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                export default async function handler(req, res) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { username } = req.query;
-  if (!username || typeof username !== 'string') {
-    return res.status(400).json({ error: 'Username is required' });
-  }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    const { username } = req.query;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      if (!username || typeof username !== 'string') {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          return res.status(400).json({ error: 'Username is required' });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
 
-  const clean = username.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-  if (!clean) return res.status(400).json({ error: 'Invalid username' });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              const clean = username.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if (!clean) return res.status(400).json({ error: 'Invalid username' });
 
-  try {
-    // 1. Fetch data
-    const { user, commits } = await fetchCommits(clean);
-    if (!commits.length) {
-      return res.status(404).json({ error: 'No public commits found for this user.' });
-    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  try {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      // 1. Fetch data
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          const { user, commits } = await fetchCommits(clean);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              if (!commits.length) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    return res.status(404).json({ error: 'No public commits found for this user.' });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
 
-    // 2. Analyze
-    const stats = analyzeCommits(commits);
-    const archetype = getArchetype(stats);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            // 2. Analyze
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                const stats = analyzeCommits(commits);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    const archetype = getArchetype(stats);
 
-    // 3. GPT-4 verdict (only if API key is set)
-    let verdict = 'A developer who ships code and takes names. The commit history tells a story of dedication, late nights, and an above-average relationship with the backspace key.';
-    if (process.env.GEMINI_API_KEY) {
-      const recentMsgs = commits.slice(0, 30).map(c => c.message);
-      verdict = await generateVerdict(user.login, stats, archetype, recentMsgs);
-    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        // 3. AI verdict (only if API key is set)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            let verdict = 'A developer who ships code and takes names. The commit history tells a story of dedication, late nights, and an above-average relationship with the backspace key.';
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if (process.env.GEMINI_API_KEY) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      const recentMsgs = commits.slice(0, 30).map(c => c.message);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            verdict = await generateVerdict(user.login, stats, archetype, recentMsgs);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
 
-    // 4. Return full profile
-    return res.status(200).json({
-      user: {
-        login: user.login,
-        name: user.name || user.login,
-        avatar: user.avatar_url,
-        bio: user.bio,
-        publicRepos: user.public_repos,
-        followers: user.followers,
-      },
-      archetype,
-      stats,
-      verdict,
-      sampleCommits: commits.slice(0, 6).map(c => c.message),
-    });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // 4. Return full profile
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return res.status(200).json({
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              user: {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      login: user.login,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              name: user.name || user.login,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      avatar: user.avatar_url,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              bio: user.bio,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      publicRepos: user.public_repos,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              followers: user.followers,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    },
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          archetype,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                stats,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      verdict,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            sampleCommits: commits.slice(0, 6).map(c => c.message),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                });
 
-  } catch (err) {
-    console.error('[DevMood API]', err.message);
-    return res.status(500).json({ error: err.message || 'Something went wrong. Please try again.' });
-  }
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  } catch (err) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      console.error('[DevMood API]', err.message);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          return res.status(500).json({ error: err.message || 'Something went wrong. Please try again.' });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
