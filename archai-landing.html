@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArchAI — AI System Design Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:     #080810;
+  --bg2:    #0d0d1a;
+  --bg3:    #111122;
+  --card:   #0f0f1e;
+  --primary:#ff5e5e;
+  --blue:   #5e9fff;
+  --green:  #00f5a0;
+  --yellow: #ffd166;
+  --orange: #ff9a3c;
+  --text:   #eeeeff;
+  --muted:  #5a5a88;
+  --border: rgba(255,94,94,0.15);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ── CURSOR ── */
+.cursor { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); transition: transform 0.15s; mix-blend-mode: screen; }
+.cursor-ring { width: 32px; height: 32px; border: 1px solid rgba(255,94,94,0.4); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); transition: left 0.1s ease-out, top 0.1s ease-out; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 3rem;
+  background: rgba(8,8,16,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 1rem; font-weight: 700;
+}
+.nav-logo { font-size: 1.4rem; }
+.nav-brand span { color: var(--primary); }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  padding: 0.5rem 1.2rem; border-radius: 6px;
+  text-decoration: none; font-size: 0.8rem; font-weight: 600;
+  transition: opacity 0.2s;
+}
+.nav-cta:hover { opacity: 0.85; }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 8rem 3rem 4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-noise {
+  position: absolute; inset: 0; z-index: 0; opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* grid lines background */
+.grid-bg {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(255,94,94,0.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,94,94,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+}
+
+.hero-content {
+  position: relative; z-index: 2;
+  max-width: 680px;
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,94,94,0.1);
+  border: 1px solid rgba(255,94,94,0.3);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 1.5rem;
+}
+.hero-badge-dot { width: 6px; height: 6px; background: var(--primary); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:0.5; transform:scale(1.4); } }
+
+h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2.8rem, 6vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.5rem;
+}
+h1 .line2 { color: var(--primary); display: block; }
+h1 .line3 { color: var(--blue); display: block; }
+
+.hero-sub {
+  font-size: 1.15rem; color: var(--muted);
+  max-width: 520px; margin-bottom: 2.5rem;
+  line-height: 1.8;
+}
+
+.hero-ctas {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary); color: #fff;
+  padding: 1rem 2rem; border-radius: 8px;
+  text-decoration: none; font-weight: 600; font-size: 0.95rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 30px rgba(255,94,94,0.3);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(255,94,94,0.5); }
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); color: var(--text);
+  padding: 1rem 2rem; border-radius: 8px;
+  text-decoration: none; font-weight: 500; font-size: 0.95rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+.btn-ghost:hover { border-color: var(--primary); background: rgba(255,94,94,0.05); }
+
+/* ── ARCH PREVIEW (right side) ── */
+.hero-diagram {
+  position: absolute; right: 3rem; top: 50%; transform: translateY(-50%);
+  z-index: 2;
+  animation: float 6s ease-in-out infinite;
+}
+@keyframes float { 0%,100%{ transform:translateY(-50%); } 50%{ transform:translateY(calc(-50% - 14px)); } }
+
+.diagram-card {
+  width: 340px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,94,94,0.08);
+}
+.diagram-header {
+  background: var(--bg2);
+  padding: 0.75rem 1rem;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.diagram-dots { display: flex; gap: 6px; }
+.diagram-dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #ffbd2e; }
+.dot-g { background: #28c840; }
+.diagram-title { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted); margin-left: 4px; }
+
+.diagram-body { padding: 1.2rem; }
+.diagram-prompt {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem; color: var(--muted);
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  border-left: 2px solid var(--primary);
+}
+.diagram-prompt strong { color: var(--primary); }
+
+.arch-diagram {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 1rem;
+}
+.arch-node {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0;
+}
+.arch-box {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.arch-box.client { background: rgba(94,159,255,0.15); border: 1px solid rgba(94,159,255,0.3); color: var(--blue); }
+.arch-box.api    { background: rgba(255,94,94,0.15); border: 1px solid rgba(255,94,94,0.3); color: var(--primary); }
+.arch-box.ai     { background: rgba(255,166,0,0.12); border: 1px solid rgba(255,166,0,0.3); color: var(--yellow); }
+.arch-box.db     { background: rgba(0,245,160,0.1); border: 1px solid rgba(0,245,160,0.25); color: var(--green); }
+.arch-arrow { font-size: 0.6rem; color: var(--muted); flex-shrink: 0; }
+.arch-label { font-size: 0.6rem; color: var(--muted); }
+
+.diagram-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 1rem; padding-top: 0.8rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.diagram-stat { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: var(--muted); }
+.diagram-stat strong { color: var(--primary); }
+.diagram-gen {
+  font-family: 'Space Mono', monospace; font-size: 0.6rem;
+  color: var(--green); display: flex; align-items: center; gap: 4px;
+}
+.gen-dot { width: 5px; height: 5px; background: var(--green); border-radius: 50%; animation: pulse 1.5s infinite; }
+
+/* ── SECTION COMMON ── */
+section { padding: 6rem 3rem; }
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--primary); margin-bottom: 1rem;
+}
+h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800; letter-spacing: -0.02em;
+  line-height: 1.1; margin-bottom: 1rem;
+}
+
+/* ── HOW IT WORKS ── */
+.how-it-works { background: var(--bg2); }
+.steps-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 2rem;
+  margin-top: 3rem; position: relative;
+}
+.steps-grid::before {
+  content: '';
+  position: absolute; top: 32px; left: calc(16.66% + 1rem); right: calc(16.66% + 1rem);
+  height: 1px;
+  background: linear-gradient(90deg, var(--primary), var(--blue));
+  opacity: 0.3;
+}
+.step { text-align: center; padding: 2rem 1.5rem; }
+.step-num {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace; font-size: 1.2rem; font-weight: 700;
+  color: var(--primary); margin: 0 auto 1.5rem;
+  position: relative; z-index: 1;
+}
+.step-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+.step h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; }
+.step p { font-size: 0.875rem; color: var(--muted); line-height: 1.7; }
+
+/* ── FEATURES ── */
+.features { }
+.features-intro { max-width: 540px; margin-bottom: 3rem; }
+.features-intro p { color: var(--muted); margin-top: 0.8rem; }
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.2rem;
+}
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.8rem;
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+  position: relative; overflow: hidden;
+}
+.feature-card::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255,94,94,0.3);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+.feature-card:hover::after { opacity: 1; }
+.feature-icon { font-size: 2.2rem; margin-bottom: 1rem; }
+.feature-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; margin-bottom: 0.4rem; }
+.feature-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.7; }
+.feature-tag {
+  display: inline-block; margin-top: 1rem;
+  font-family: 'Space Mono', monospace; font-size: 0.6rem;
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(255,94,94,0.1); color: var(--primary);
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+/* ── STACK ── */
+.stack-section { background: var(--bg2); }
+.stack-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem; margin-top: 3rem;
+}
+.stack-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.4rem;
+  display: flex; align-items: center; gap: 1rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.stack-card:hover { transform: translateY(-2px); border-color: rgba(255,94,94,0.3); }
+.stack-icon { font-size: 1.8rem; flex-shrink: 0; }
+.stack-info { }
+.stack-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; }
+.stack-role { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+/* ── CTA ── */
+.cta-section {
+  text-align: center;
+  padding: 8rem 3rem;
+  position: relative; overflow: hidden;
+}
+.cta-glow {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(ellipse, rgba(255,94,94,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cta-section h2 { margin-bottom: 1rem; }
+.cta-section p { color: var(--muted); max-width: 440px; margin: 0 auto 2.5rem; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem 3rem;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 1rem;
+}
+.footer-brand { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--muted); }
+.footer-brand strong { color: var(--primary); }
+.footer-links { display: flex; gap: 1.5rem; }
+.footer-links a { color: var(--muted); text-decoration: none; font-size: 0.8rem; transition: color 0.2s; }
+.footer-links a:hover { color: var(--text); }
+
+/* ── REVEAL ANIMATIONS ── */
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-delay-1 { transition-delay: 0.15s; }
+.reveal-delay-2 { transition-delay: 0.3s; }
+.reveal-delay-3 { transition-delay: 0.45s; }
+
+@media (max-width: 900px) {
+  .hero-diagram { display: none; }
+  .steps-grid { grid-template-columns: 1fr; }
+  nav { padding: 1rem 1.5rem; }
+  .nav-links { display: none; }
+  section { padding: 4rem 1.5rem; }
+  .hero { padding: 7rem 1.5rem 3rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav>
+  <div class="nav-brand">
+    <span class="nav-logo">🏗️</span>
+    <div>Arch<span>AI</span></div>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#stack">Stack</a></li>
+  </ul>
+  <a href="https://github.com/saadmd723/archai" target="_blank" class="nav-cta">
+    View on GitHub ↗
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-noise"></div>
+  <div class="grid-bg"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      AI-Powered · Live
+    </div>
+    <h1>
+      Describe it.
+      <span class="line2">Architect it.</span>
+      <span class="line3">Ship it.</span>
+    </h1>
+    <p class="hero-sub">
+      Tell ArchAI what you're building — it generates a complete system design with component breakdowns, data flows, and interactive Mermaid diagrams in seconds.
+    </p>
+    <div class="hero-ctas">
+      <a href="https://archai.vercel.app" target="_blank" class="btn-primary">
+        Try ArchAI ↗
+      </a>
+      <a href="https://github.com/saadmd723/archai" target="_blank" class="btn-ghost">
+        GitHub
+      </a>
+    </div>
+  </div>
+
+  <!-- Diagram preview -->
+  <div class="hero-diagram">
+    <div class="diagram-card">
+      <div class="diagram-header">
+        <div class="diagram-dots">
+          <div class="diagram-dot dot-r"></div>
+          <div class="diagram-dot dot-y"></div>
+          <div class="diagram-dot dot-g"></div>
+        </div>
+        <span class="diagram-title">archai — output preview</span>
+      </div>
+      <div class="diagram-body">
+        <div class="diagram-prompt">
+          <strong>Prompt:</strong> "A real-time chat app with rooms, file sharing and auth"
+        </div>
+        <div class="arch-diagram">
+          <div class="arch-node">
+            <div class="arch-box client">Next.js Client</div>
+            <span class="arch-arrow">→</span>
+            <div class="arch-box api">API Gateway</div>
+          </div>
+          <div class="arch-node" style="padding-left:1.5rem;">
+            <span class="arch-arrow">↓</span>
+            <div class="arch-label">WebSocket / REST</div>
+          </div>
+          <div class="arch-node" style="padding-left:1.5rem;">
+            <div class="arch-box ai">Gemini AI</div>
+            <span class="arch-arrow">·</span>
+            <div class="arch-box api">Auth Service</div>
+          </div>
+          <div class="arch-node" style="padding-left:1.5rem;">
+            <span class="arch-arrow">↓</span>
+            <div class="arch-label">persistence</div>
+          </div>
+          <div class="arch-node" style="padding-left:1.5rem;">
+            <div class="arch-box db">MongoDB</div>
+            <span class="arch-arrow">·</span>
+            <div class="arch-box db">S3 / CDN</div>
+          </div>
+        </div>
+        <div class="diagram-footer">
+          <div class="diagram-stat"><strong>6</strong> components · <strong>4</strong> layers</div>
+          <div class="diagram-gen"><span class="gen-dot"></span> Generated in 2.1s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-it-works" id="how">
+  <div class="section-label">The Process</div>
+  <h2>From prompt to architecture<br>in three steps.</h2>
+  <div class="steps-grid">
+    <div class="step reveal">
+      <div class="step-num">01</div>
+      <div class="step-icon">✍️</div>
+      <h3>Describe Your App</h3>
+      <p>Type a plain-English description of what you're building — no technical jargon required. The more context you give, the better.</p>
+    </div>
+    <div class="step reveal reveal-delay-1">
+      <div class="step-num">02</div>
+      <div class="step-icon">🤖</div>
+      <h3>Gemini Thinks</h3>
+      <p>Gemini AI analyzes your requirements and reasons through the best architecture patterns, data flows, and component boundaries.</p>
+    </div>
+    <div class="step reveal reveal-delay-2">
+      <div class="step-num">03</div>
+      <div class="step-icon">📐</div>
+      <h3>Get Your Blueprint</h3>
+      <p>Receive a structured breakdown with an interactive Mermaid diagram, component list, and technology recommendations — ready to build.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="features-intro reveal">
+    <div class="section-label">What It Does</div>
+    <h2>Everything a system<br>design needs.</h2>
+    <p>ArchAI doesn't just name components — it explains why each one exists and how they connect.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon">🗺️</div>
+      <div class="feature-title">Mermaid Diagrams</div>
+      <div class="feature-desc">Interactive, rendered flowcharts that visualize your architecture. Copy the source or embed it anywhere.</div>
+      <span class="feature-tag">Visual</span>
+    </div>
+    <div class="feature-card reveal reveal-delay-1">
+      <div class="feature-icon">🧩</div>
+      <div class="feature-title">Component Breakdown</div>
+      <div class="feature-desc">Every service, database, and interface is listed with its role, responsibilities, and interface contracts.</div>
+      <span class="feature-tag">Structured</span>
+    </div>
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-icon">🔄</div>
+      <div class="feature-title">Data Flow Mapping</div>
+      <div class="feature-desc">See exactly how data moves through your system — from user input to database and back — at every layer.</div>
+      <span class="feature-tag">Flow</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Instant Generation</div>
+      <div class="feature-desc">Results stream in under 3 seconds. Iterate fast — tweak your prompt and regenerate without waiting.</div>
+      <span class="feature-tag">Speed</span>
+    </div>
+    <div class="feature-card reveal reveal-delay-1">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Pattern-Aware</div>
+      <div class="feature-desc">ArchAI knows microservices, monoliths, event-driven, CQRS, and more — and picks the right fit for your needs.</div>
+      <span class="feature-tag">Intelligent</span>
+    </div>
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-icon">📋</div>
+      <div class="feature-title">Copy-Ready Output</div>
+      <div class="feature-desc">Export your architecture as Mermaid code, markdown text, or a structured JSON spec — ready for your docs.</div>
+      <span class="feature-tag">Export</span>
+    </div>
+  </div>
+</section>
+
+<!-- STACK -->
+<section class="stack-section" id="stack">
+  <div class="section-label">Tech Stack</div>
+  <h2>Built with modern tools<br>for modern apps.</h2>
+  <div class="stack-grid">
+    <div class="stack-card reveal">
+      <span class="stack-icon">⚡</span>
+      <div class="stack-info">
+        <div class="stack-name">Next.js 14</div>
+        <div class="stack-role">App framework + API routes</div>
+      </div>
+    </div>
+    <div class="stack-card reveal reveal-delay-1">
+      <span class="stack-icon">🤖</span>
+      <div class="stack-info">
+        <div class="stack-name">Gemini AI</div>
+        <div class="stack-role">Architecture generation</div>
+      </div>
+    </div>
+    <div class="stack-card reveal reveal-delay-2">
+      <span class="stack-icon">📊</span>
+      <div class="stack-info">
+        <div class="stack-name">Mermaid.js</div>
+        <div class="stack-role">Diagram rendering</div>
+      </div>
+    </div>
+    <div class="stack-card reveal reveal-delay-3">
+      <span class="stack-icon">▲</span>
+      <div class="stack-info">
+        <div class="stack-name">Vercel</div>
+        <div class="stack-role">Hosting + Edge deployment</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div class="reveal" style="position:relative; z-index:1;">
+    <div class="section-label" style="justify-content:center; display:flex;">Try It Free</div>
+    <h2>Your architecture is<br>one prompt away.</h2>
+    <p>No sign-up. No credit card. Just describe what you're building and get a complete system design instantly.</p>
+    <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+      <a href="https://archai.vercel.app" target="_blank" class="btn-primary">
+        Open ArchAI ↗
+      </a>
+      <a href="index.html" class="btn-ghost">
+        ← Back to Portfolio
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand">🏗️ <strong>ArchAI</strong> — by Saad Mohammad</div>
+  <div class="footer-links">
+    <a href="index.html">Portfolio</a>
+    <a href="https://github.com/saadmd723/archai" target="_blank">GitHub</a>
+    <a href="mailto:saadmd723@gmail.com">Contact</a>
+  </div>
+</footer>
+
+<script>
+// Cursor
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px';
+  cursor.style.top = my + 'px';
+});
+setInterval(() => {
+  ring.style.left = mx + 'px';
+  ring.style.top = my + 'px';
+}, 80);
+
+// Reveal on scroll
+const revealEls = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+revealEls.forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
