@@ -1,1 +1,813 @@
-x
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevMood — Your GitHub, Unwrapped</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:     #080810;
+  --bg2:    #0d0d1a;
+  --bg3:    #111122;
+  --card:   #0f0f1e;
+  --primary:#7c6bff;
+  --pink:   #ff6b9d;
+  --green:  #00f5a0;
+  --yellow: #ffd166;
+  --orange: #ff9a3c;
+  --text:   #eeeeff;
+  --muted:  #5a5a88;
+  --border: rgba(124,107,255,0.15);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ── CURSOR ── */
+.cursor { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); transition: transform 0.15s; mix-blend-mode: screen; }
+.cursor-ring { width: 32px; height: 32px; border: 1px solid rgba(124,107,255,0.4); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); transition: left 0.1s ease-out, top 0.1s ease-out; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 3rem;
+  background: rgba(8,8,16,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 1rem; font-weight: 700;
+}
+.nav-logo { font-size: 1.4rem; }
+.nav-brand span { color: var(--primary); }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  padding: 0.5rem 1.2rem; border-radius: 6px;
+  text-decoration: none; font-size: 0.8rem; font-weight: 600;
+  transition: opacity 0.2s;
+}
+.nav-cta:hover { opacity: 0.85; }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 8rem 3rem 4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-noise {
+  position: absolute; inset: 0; z-index: 0; opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* commit ticker tape */
+.ticker-wrap {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 100%; overflow: hidden; pointer-events: none; z-index: 0;
+}
+.ticker-col {
+  position: absolute; top: -20px;
+  display: flex; flex-direction: column; gap: 12px;
+  opacity: 0.06;
+  animation: ticker-fall linear infinite;
+}
+.ticker-col:nth-child(1) { left: 5%; animation-duration: 20s; animation-delay: 0s; }
+.ticker-col:nth-child(2) { left: 18%; animation-duration: 25s; animation-delay: -5s; }
+.ticker-col:nth-child(3) { left: 33%; animation-duration: 18s; animation-delay: -8s; }
+.ticker-col:nth-child(4) { left: 52%; animation-duration: 22s; animation-delay: -3s; }
+.ticker-col:nth-child(5) { left: 68%; animation-duration: 28s; animation-delay: -12s; }
+.ticker-col:nth-child(6) { left: 83%; animation-duration: 16s; animation-delay: -6s; }
+.ticker-col:nth-child(7) { left: 93%; animation-duration: 24s; animation-delay: -15s; }
+
+@keyframes ticker-fall {
+  from { transform: translateY(0); }
+  to { transform: translateY(110vh); }
+}
+
+.commit-pill {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+}
+
+.hero-content {
+  position: relative; z-index: 2;
+  max-width: 680px;
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(124,107,255,0.1);
+  border: 1px solid rgba(124,107,255,0.3);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 1.5rem;
+}
+.hero-badge-dot { width: 6px; height: 6px; background: var(--primary); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:0.5; transform:scale(1.4); } }
+
+h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2.8rem, 6vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.5rem;
+}
+h1 .line2 { color: var(--primary); display: block; }
+h1 .line3 { color: var(--pink); display: block; }
+
+.hero-sub {
+  font-size: 1.15rem; color: var(--muted);
+  max-width: 500px; margin-bottom: 2.5rem;
+  line-height: 1.8;
+}
+
+.hero-ctas {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary); color: #fff;
+  padding: 1rem 2rem; border-radius: 8px;
+  text-decoration: none; font-weight: 600; font-size: 0.95rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 30px rgba(124,107,255,0.3);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(124,107,255,0.5); }
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); color: var(--text);
+  padding: 1rem 2rem; border-radius: 8px;
+  text-decoration: none; font-weight: 500; font-size: 0.95rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+.btn-ghost:hover { border-color: var(--primary); background: rgba(124,107,255,0.05); }
+
+/* ── PERSONALITY CARDS (right side) ── */
+.hero-cards {
+  position: absolute; right: 4rem; top: 50%; transform: translateY(-50%);
+  z-index: 2; display: flex; flex-direction: column; gap: 1rem;
+  animation: cards-float 6s ease-in-out infinite;
+}
+@keyframes cards-float { 0%,100%{ transform:translateY(-50%) translateX(0); } 50%{ transform:translateY(calc(-50% - 12px)) translateX(-4px); } }
+
+.p-card {
+  width: 280px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.2rem 1.4rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.p-card:hover { transform: translateX(-4px); }
+.p-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: 16px 16px 0 0;
+}
+.p-card.purple::before { background: linear-gradient(90deg, var(--primary), var(--pink)); }
+.p-card.green::before { background: linear-gradient(90deg, var(--green), var(--primary)); }
+.p-card.orange::before { background: linear-gradient(90deg, var(--orange), var(--yellow)); }
+
+.p-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 0.8rem; }
+.p-card-emoji { font-size: 1.5rem; }
+.p-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; }
+.p-card-subtitle { font-size: 0.7rem; color: var(--muted); }
+.p-card-type {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem; font-weight: 700;
+  color: var(--primary); text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(124,107,255,0.1);
+  padding: 2px 8px; border-radius: 4px;
+  margin-bottom: 0.8rem; display: inline-block;
+}
+.p-card.green .p-card-type { color: var(--green); background: rgba(0,245,160,0.1); }
+.p-card.orange .p-card-type { color: var(--orange); background: rgba(255,154,60,0.1); }
+
+.p-card-stats { display: flex; flex-direction: column; gap: 6px; }
+.p-stat { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.p-stat-label { font-size: 0.7rem; color: var(--muted); flex-shrink: 0; }
+.p-stat-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.p-stat-fill { height: 100%; border-radius: 2px; background: var(--primary); }
+.p-card.green .p-stat-fill { background: var(--green); }
+.p-card.orange .p-stat-fill { background: var(--orange); }
+.p-stat-val { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--text); width: 28px; text-align: right; flex-shrink: 0; }
+
+/* ── SECTION COMMON ── */
+section { padding: 6rem 3rem; }
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--primary); margin-bottom: 1rem;
+}
+h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800; letter-spacing: -0.02em;
+  line-height: 1.1; margin-bottom: 1rem;
+}
+
+/* ── ARCHETYPES ── */
+.archetypes { background: var(--bg2); }
+.archetype-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 1.2rem; margin-top: 3rem;
+}
+.arch-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.6rem;
+  cursor: default;
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+.arch-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(124,107,255,0.4);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+.arch-emoji { font-size: 2.2rem; margin-bottom: 0.8rem; }
+.arch-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: 0.4rem; }
+.arch-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+.arch-tag {
+  display: inline-block; margin-top: 0.8rem;
+  font-family: 'Space Mono', monospace; font-size: 0.6rem;
+  padding: 2px 8px; border-radius: 4px;
+  background: rgba(124,107,255,0.1); color: var(--primary);
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+/* ── HOW IT WORKS ── */
+.how-it-works { position: relative; }
+.steps-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 2rem;
+  margin-top: 3rem; position: relative;
+}
+.steps-grid::before {
+  content: '';
+  position: absolute; top: 32px; left: calc(16.66% + 1rem); right: calc(16.66% + 1rem);
+  height: 1px;
+  background: linear-gradient(90deg, var(--primary), var(--pink));
+  opacity: 0.3;
+}
+.step { text-align: center; padding: 2rem 1.5rem; }
+.step-num {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace; font-size: 1.2rem; font-weight: 700;
+  color: var(--primary); margin: 0 auto 1.5rem;
+  position: relative; z-index: 1;
+}
+.step-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+.step h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; }
+.step p { font-size: 0.875rem; color: var(--muted); line-height: 1.7; }
+
+/* ── SAMPLE PROFILE ── */
+.sample-section { background: var(--bg2); }
+.sample-wrapper {
+  margin-top: 3rem;
+  display: grid; grid-template-columns: 1fr 1.2fr; gap: 3rem; align-items: center;
+}
+.sample-card-big {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.sample-card-big::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--pink), var(--green));
+}
+.sample-top {
+  display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+}
+.sample-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--pink));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+}
+.sample-user { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+.sample-handle { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+.archetype-big {
+  background: linear-gradient(135deg, rgba(124,107,255,0.15), rgba(255,107,157,0.1));
+  border: 1px solid rgba(124,107,255,0.2);
+  border-radius: 12px; padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+}
+.arch-big-label { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+.arch-big-name { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; }
+.arch-big-emoji { font-size: 1.8rem; float: right; margin-top: -1.8rem; }
+.arch-big-desc { font-size: 0.8rem; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+
+.sample-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.5rem; }
+.stat-pill {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.8rem;
+}
+.stat-pill-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.stat-pill-val { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--text); }
+.stat-pill-val span { font-size: 0.7rem; color: var(--muted); font-family: 'Space Grotesk', sans-serif; font-weight: 400; }
+
+.ai-verdict {
+  background: rgba(124,107,255,0.06); border: 1px solid rgba(124,107,255,0.15);
+  border-radius: 12px; padding: 1rem 1.2rem;
+}
+.ai-verdict-label { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.ai-verdict p { font-size: 0.8rem; color: var(--muted); line-height: 1.7; font-style: italic; }
+
+.sample-text h3 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 1rem; line-height: 1.2; }
+.sample-text p { color: var(--muted); font-size: 0.9rem; line-height: 1.8; margin-bottom: 1rem; }
+.features-list { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; margin-top: 1.5rem; }
+.features-list li { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; color: var(--muted); }
+.feat-icon { width: 28px; height: 28px; border-radius: 6px; background: rgba(124,107,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
+
+/* ── STATS TICKER ── */
+.stats-ticker {
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 1.2rem 0;
+  overflow: hidden;
+}
+.stats-track {
+  display: flex; gap: 3rem; width: max-content;
+  animation: scroll-track 30s linear infinite;
+}
+@keyframes scroll-track { from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+.stats-item {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Space Mono', monospace; font-size: 0.75rem;
+  color: var(--muted); white-space: nowrap; flex-shrink: 0;
+}
+.stats-item strong { color: var(--text); }
+.stats-dot { width: 4px; height: 4px; background: var(--primary); border-radius: 50%; }
+
+/* ── CTA ── */
+.cta-section {
+  text-align: center;
+  padding: 8rem 3rem;
+  position: relative;
+  overflow: hidden;
+}
+.cta-glow {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 600px; height: 600px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,107,255,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cta-section h2 { font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 1rem; }
+.cta-section p { color: var(--muted); max-width: 480px; margin: 0 auto 2.5rem; }
+.cta-buttons { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 3rem;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.8rem; color: var(--muted);
+}
+footer a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+footer a:hover { color: var(--text); }
+
+/* ── REVEAL ── */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .hero-cards { display: none; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .steps-grid::before { display: none; }
+  .sample-wrapper { grid-template-columns: 1fr; }
+  nav { padding: 1rem 1.5rem; }
+  .nav-links { display: none; }
+  section { padding: 4rem 1.5rem; }
+  .hero { padding: 7rem 1.5rem 3rem; }
+  .cta-section { padding: 5rem 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <span class="nav-logo">🧠</span>
+    <span>Dev<span>Mood</span></span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#archetypes">Archetypes</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#sample">Sample</a></li>
+  </ul>
+  <a href="#cta" class="nav-cta">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Analyze Me
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-noise"></div>
+
+  <!-- Ticker tape commits -->
+  <div class="ticker-wrap">
+    <div class="ticker-col">
+      <div class="commit-pill">fix: finally works</div>
+      <div class="commit-pill">feat: add dark mode</div>
+      <div class="commit-pill">wip: dont look</div>
+      <div class="commit-pill">refactor: clean up mess</div>
+      <div class="commit-pill">fix: why was this here</div>
+      <div class="commit-pill">chore: update deps</div>
+      <div class="commit-pill">feat: 🚀 new thing</div>
+      <div class="commit-pill">temp: DELETE THIS</div>
+    </div>
+    <div class="ticker-col">
+      <div class="commit-pill">fix: hotfix prod 🔥</div>
+      <div class="commit-pill">docs: update readme</div>
+      <div class="commit-pill">feat: user auth</div>
+      <div class="commit-pill">fix: null pointer again</div>
+      <div class="commit-pill">wip: 2am coding</div>
+      <div class="commit-pill">refactor: extract utils</div>
+    </div>
+    <div class="ticker-col">
+      <div class="commit-pill">feat: ✨ magic</div>
+      <div class="commit-pill">fix: off by one error</div>
+      <div class="commit-pill">chore: lint fix</div>
+      <div class="commit-pill">feat: add tests (jk)</div>
+      <div class="commit-pill">fix: css nightmare</div>
+      <div class="commit-pill">wip: almost there</div>
+      <div class="commit-pill">feat: new dashboard</div>
+    </div>
+    <div class="ticker-col">
+      <div class="commit-pill">FINAL FINAL v3</div>
+      <div class="commit-pill">fix: revert the revert</div>
+      <div class="commit-pill">feat: api integration</div>
+      <div class="commit-pill">style: prettier ran</div>
+      <div class="commit-pill">fix: env variables</div>
+      <div class="commit-pill">feat: deploy config</div>
+    </div>
+    <div class="ticker-col">
+      <div class="commit-pill">fix: type error</div>
+      <div class="commit-pill">feat: search feature</div>
+      <div class="commit-pill">chore: clean up</div>
+      <div class="commit-pill">fix: 3am bug</div>
+      <div class="commit-pill">feat: export csv</div>
+      <div class="commit-pill">refactor: rename vars</div>
+    </div>
+    <div class="ticker-col">
+      <div class="commit-pill">fix: edge case</div>
+      <div class="commit-pill">wip: experiment</div>
+      <div class="commit-pill">feat: onboarding flow</div>
+      <div class="commit-pill">fix: mobile layout</div>
+      <div class="commit-pill">feat: notifications</div>
+      <div class="commit-pill">style: brand colors</div>
+    </div>
+    <div class="ticker-col">
+      <div class="commit-pill">chore: merge conflict</div>
+      <div class="commit-pill">fix: auth bug</div>
+      <div class="commit-pill">feat: filters</div>
+      <div class="commit-pill">wip: refactor db</div>
+      <div class="commit-pill">fix: prod is down</div>
+      <div class="commit-pill">feat: v2 launch</div>
+    </div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <div class="hero-badge-dot"></div>
+      Powered by GPT-4 · Full Stack · Open Source
+    </div>
+    <h1>
+      Spotify Wrapped.
+      <span class="line2">But for your</span>
+      <span class="line3">code.</span>
+    </h1>
+    <p class="hero-sub">
+      Drop your GitHub username. We analyze your commits, roast your patterns, and generate a brutally honest developer personality profile you didn't ask for but desperately need.
+    </p>
+    <div class="hero-ctas">
+      <a href="#cta" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Analyze My GitHub
+      </a>
+      <a href="#sample" class="btn-ghost">See a Sample Profile →</a>
+    </div>
+  </div>
+
+  <!-- Personality cards -->
+  <div class="hero-cards">
+    <div class="p-card purple">
+      <div class="p-card-header">
+        <span class="p-card-emoji">🌙</span>
+        <div>
+          <div class="p-card-title">@nightshift_dev</div>
+          <div class="p-card-subtitle">github.com/nightshift_dev</div>
+        </div>
+      </div>
+      <div class="p-card-type">The Midnight Coder</div>
+      <div class="p-card-stats">
+        <div class="p-stat"><span class="p-stat-label">Night Owl</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:91%"></div></div><span class="p-stat-val">91%</span></div>
+        <div class="p-stat"><span class="p-stat-label">Chaos</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:74%"></div></div><span class="p-stat-val">74%</span></div>
+        <div class="p-stat"><span class="p-stat-label">Fixes</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:62%"></div></div><span class="p-stat-val">62%</span></div>
+      </div>
+    </div>
+
+    <div class="p-card green">
+      <div class="p-card-header">
+        <span class="p-card-emoji">🚀</span>
+        <div>
+          <div class="p-card-title">@feature_factory</div>
+          <div class="p-card-subtitle">github.com/feature_factory</div>
+        </div>
+      </div>
+      <div class="p-card-type">The Feature Machine</div>
+      <div class="p-card-stats">
+        <div class="p-stat"><span class="p-stat-label">Ship Rate</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:95%"></div></div><span class="p-stat-val">95%</span></div>
+        <div class="p-stat"><span class="p-stat-label">Tests</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:22%"></div></div><span class="p-stat-val">22%</span></div>
+        <div class="p-stat"><span class="p-stat-label">Docs</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:11%"></div></div><span class="p-stat-val">11%</span></div>
+      </div>
+    </div>
+
+    <div class="p-card orange">
+      <div class="p-card-header">
+        <span class="p-card-emoji">✨</span>
+        <div>
+          <div class="p-card-title">@clean_code_monk</div>
+          <div class="p-card-subtitle">github.com/clean_code_monk</div>
+        </div>
+      </div>
+      <div class="p-card-type">The Clean Coder</div>
+      <div class="p-card-stats">
+        <div class="p-stat"><span class="p-stat-label">Readability</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:98%"></div></div><span class="p-stat-val">98%</span></div>
+        <div class="p-stat"><span class="p-stat-label">Docs</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:88%"></div></div><span class="p-stat-val">88%</span></div>
+        <div class="p-stat"><span class="p-stat-label">WIP commits</span><div class="p-stat-bar"><div class="p-stat-fill" style="width:3%"></div></div><span class="p-stat-val">3%</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS TICKER -->
+<div class="stats-ticker">
+  <div class="stats-track">
+    <div class="stats-item"><span class="stats-dot"></span> <strong>14,892</strong> profiles analyzed</div>
+    <div class="stats-item"><span class="stats-dot"></span> Most common archetype: <strong>The Midnight Coder</strong></div>
+    <div class="stats-item"><span class="stats-dot"></span> Avg commits per dev: <strong>847 / year</strong></div>
+    <div class="stats-item"><span class="stats-dot"></span> Most productive hour: <strong>11pm — 1am</strong></div>
+    <div class="stats-item"><span class="stats-dot"></span> <strong>62%</strong> of devs have a "wip" commit in their history</div>
+    <div class="stats-item"><span class="stats-dot"></span> Avg chaos index: <strong>67/100</strong></div>
+    <div class="stats-item"><span class="stats-dot"></span> Most used emoji: <strong>🔥</strong></div>
+    <!-- duplicate for seamless loop -->
+    <div class="stats-item"><span class="stats-dot"></span> <strong>14,892</strong> profiles analyzed</div>
+    <div class="stats-item"><span class="stats-dot"></span> Most common archetype: <strong>The Midnight Coder</strong></div>
+    <div class="stats-item"><span class="stats-dot"></span> Avg commits per dev: <strong>847 / year</strong></div>
+    <div class="stats-item"><span class="stats-dot"></span> Most productive hour: <strong>11pm — 1am</strong></div>
+    <div class="stats-item"><span class="stats-dot"></span> <strong>62%</strong> of devs have a "wip" commit in their history</div>
+    <div class="stats-item"><span class="stats-dot"></span> Avg chaos index: <strong>67/100</strong></div>
+    <div class="stats-item"><span class="stats-dot"></span> Most used emoji: <strong>🔥</strong></div>
+  </div>
+</div>
+
+<!-- ARCHETYPES -->
+<section class="archetypes" id="archetypes">
+  <div class="reveal">
+    <div class="section-label">// dev_archetypes</div>
+    <h2>Which one are you?</h2>
+    <p style="color:var(--muted);max-width:500px;font-size:0.9rem;">GPT-4 analyzes your commit patterns and assigns you one of 8 archetypes. Surprisingly accurate. Dangerously honest.</p>
+  </div>
+  <div class="archetype-grid">
+    <div class="arch-card reveal reveal-delay-1">
+      <div class="arch-emoji">🌙</div>
+      <div class="arch-name">The Midnight Coder</div>
+      <div class="arch-desc">Peak productivity hits after midnight. Your git log is basically a sleep disorder diary.</div>
+      <div class="arch-tag">commits: 11pm – 3am</div>
+    </div>
+    <div class="arch-card reveal reveal-delay-2">
+      <div class="arch-emoji">🚀</div>
+      <div class="arch-name">The Feature Machine</div>
+      <div class="arch-desc">Ships features at light speed. Tests are a myth. Documentation is a future problem.</div>
+      <div class="arch-tag">feat: 70%+ of commits</div>
+    </div>
+    <div class="arch-card reveal reveal-delay-3">
+      <div class="arch-emoji">🐛</div>
+      <div class="arch-name">The Bug Slayer</div>
+      <div class="arch-desc">You don't build new things — you fix the things others broke. An unsung hero.</div>
+      <div class="arch-tag">fix: 60%+ of commits</div>
+    </div>
+    <div class="arch-card reveal reveal-delay-4">
+      <div class="arch-emoji">✨</div>
+      <div class="arch-name">The Clean Coder</div>
+      <div class="arch-desc">Conventional commits, meaningful messages, perfect PR descriptions. A rare species.</div>
+      <div class="arch-tag">conventional commits only</div>
+    </div>
+    <div class="arch-card reveal reveal-delay-1">
+      <div class="arch-emoji">⚔️</div>
+      <div class="arch-name">The WIP Warrior</div>
+      <div class="arch-desc">"WIP", "temp", "TODO: fix this". Your entire career is one big work in progress.</div>
+      <div class="arch-tag">wip: 30%+ of commits</div>
+    </div>
+    <div class="arch-card reveal reveal-delay-2">
+      <div class="arch-emoji">🎨</div>
+      <div class="arch-name">The Emoji Architect</div>
+      <div class="arch-desc">Every commit has an emoji. You communicate exclusively in pictograms and vibes.</div>
+      <div class="arch-tag">emoji in 70%+ messages</div>
+    </div>
+    <div class="arch-card reveal reveal-delay-3">
+      <div class="arch-emoji">📚</div>
+      <div class="arch-name">The Doc Sage</div>
+      <div class="arch-desc">README files that read like novels. Type annotations everywhere. Future devs thank you.</div>
+      <div class="arch-tag">docs: 20%+ of commits</div>
+    </div>
+    <div class="arch-card reveal reveal-delay-4">
+      <div class="arch-emoji">🔥</div>
+      <div class="arch-name">The Chaos Agent</div>
+      <div class="arch-desc">FINAL_v2_FINAL_REAL.js. Deploys to prod on Fridays. Lives dangerously, regrets nothing.</div>
+      <div class="arch-tag">chaos index: 90+</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-it-works" id="how">
+  <div class="reveal">
+    <div class="section-label">// how_it_works</div>
+    <h2>Three steps to<br>self-discovery</h2>
+  </div>
+  <div class="steps-grid">
+    <div class="step reveal reveal-delay-1">
+      <div class="step-num">01</div>
+      <div class="step-icon">👤</div>
+      <h3>Enter Your GitHub</h3>
+      <p>Drop your GitHub username. We pull your public commit history across all repos — no OAuth, no permissions needed.</p>
+    </div>
+    <div class="step reveal reveal-delay-2">
+      <div class="step-num">02</div>
+      <div class="step-icon">🧠</div>
+      <h3>AI Analyzes You</h3>
+      <p>GPT-4 dissects your commit messages, timestamps, frequency, and patterns to build a psychological profile of your coding self.</p>
+    </div>
+    <div class="step reveal reveal-delay-3">
+      <div class="step-num">03</div>
+      <div class="step-icon">🎯</div>
+      <h3>Get Roasted</h3>
+      <p>Receive your developer archetype, personalized stats, an AI-written personality verdict, and a shareable profile card.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SAMPLE PROFILE -->
+<section class="sample-section" id="sample">
+  <div class="reveal">
+    <div class="section-label">// sample_profile</div>
+    <h2>What your profile looks like</h2>
+  </div>
+  <div class="sample-wrapper">
+    <div class="sample-card-big reveal reveal-delay-1">
+      <div class="sample-top">
+        <div class="sample-avatar">🧑‍💻</div>
+        <div>
+          <div class="sample-user">Saad Mohammad</div>
+          <div class="sample-handle">@Saadonweb · 284 commits analyzed</div>
+        </div>
+      </div>
+
+      <div class="archetype-big">
+        <div class="arch-big-label">Developer Archetype</div>
+        <div class="arch-big-name">The Midnight Coder 🌙</div>
+        <div class="arch-big-desc">Your most active window is 10pm–2am. You write code when the world sleeps, and your commit messages get progressively unhinged as the night goes on.</div>
+      </div>
+
+      <div class="sample-stats-grid">
+        <div class="stat-pill">
+          <div class="stat-pill-label">Night Owl Score</div>
+          <div class="stat-pill-val">89 <span>/ 100</span></div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">Chaos Index</div>
+          <div class="stat-pill-val">71 <span>/ 100</span></div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">Top Commit Type</div>
+          <div class="stat-pill-val">fix: <span>38%</span></div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">Most Active Day</div>
+          <div class="stat-pill-val">Friday <span>🍕</span></div>
+        </div>
+      </div>
+
+      <div class="ai-verdict">
+        <div class="ai-verdict-label">🤖 GPT-4 Verdict</div>
+        <p>"A passionate builder who ships fast and debugs faster. The commit history suggests someone who treats production as a staging environment and sleeps are merely optional. Respect."</p>
+      </div>
+    </div>
+
+    <div class="sample-text reveal reveal-delay-2">
+      <h3>Your GitHub, brutally analyzed.</h3>
+      <p>DevMood doesn't just count commits. It reads between the lines — the 3am "fix: pls work" message, the Friday deploy, the "final v2 ACTUAL FINAL" file.</p>
+      <p>GPT-4 synthesizes all of it into a personality profile that's equal parts analytics report and roast session.</p>
+      <ul class="features-list">
+        <li><div class="feat-icon">📊</div> Commit frequency &amp; timing heatmap</li>
+        <li><div class="feat-icon">🧠</div> AI-generated personality verdict</li>
+        <li><div class="feat-icon">🎯</div> Developer archetype assignment</li>
+        <li><div class="feat-icon">📈</div> 8 scored developer dimensions</li>
+        <li><div class="feat-icon">🔗</div> Shareable profile card</li>
+        <li><div class="feat-icon">⚡</div> Results in under 10 seconds</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="cta">
+  <div class="cta-glow"></div>
+  <div class="reveal">
+    <div class="section-label" style="justify-content:center;display:flex">// analyze_me</div>
+    <h2>Find out who you<br>really are.</h2>
+    <p>Drop your username. The AI doesn't lie, and neither does your commit history.</p>
+  </div>
+  <div class="cta-buttons reveal reveal-delay-2">
+    <a href="https://devmood-khaki.vercel.app" target="_blank" class="btn-primary" style="font-size:1.05rem;padding:1.1rem 2.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Analyze My GitHub
+    </a>
+    <a href="https://github.com/Saadonweb/portfolio/tree/main/devmood" target="_blank" class="btn-ghost" style="font-size:1.05rem;padding:1.1rem 2.5rem;">
+      View Source ↗
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>🧠 <strong>DevMood</strong> &nbsp;·&nbsp; Built by <a href="index.html">Saad Mohammad</a></div>
+  <div>
+    <a href="https://github.com/Saadonweb/portfolio/tree/main/devmood">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:saadmd723@gmail.com">Contact</a>
+  </div>
+</footer>
+
+<script>
+// ── CURSOR ──
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cursor.style.left = mx + 'px'; cursor.style.top = my + 'px'; });
+function animRing() { rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12; ring.style.left = rx + 'px'; ring.style.top = ry + 'px'; requestAnimationFrame(animRing); }
+animRing();
+
+// ── SCROLL REVEAL ──
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
